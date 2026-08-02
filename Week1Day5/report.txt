@@ -1,1 +1,176 @@
 Week 1 Day 5 (Practical Exercise)
+Exercise Deliverable  Pagination Debug, Test & Review
+
+Branch: feature-branch  Base: 461277d  Uncommitted: 3 modified, 1 new
+
+---
+1. Debugging Evidence
+
+Live probe against the real route stack, DATABASE_URL aimed at a dead port so "reached the repository" (500) is distinguishable from "rejected by validation" (400):
+
+500  INTERNAL_ERROR    default (no params)                    {}
+500  INTERNAL_ERROR    limit=100 (boundary, allowed)          {}
+400  VALIDATION_ERROR  limit=101                              {"limit":"must be at most 100"}
+400  VALIDATION_ERROR  limit=500                              {"limit":"must be at most 100"}
+400  VALIDATION_ERROR  limit=0                                {"limit":"must be at least 1"}
+400  VALIDATION_ERROR  limit=abc                              {"limit":"must be an integer"}
+400  VALIDATION_ERROR  offset=-1                              {"offset":"must be at least 0"}
+500  INTERNAL_ERROR    offset=1e21                            {}    defect
+500  INTERNAL_ERROR    offset=99999999999999999999            {}    defect
+
+Serialization evidence for why those two reach the database and fail there:
+
+1e21                  text "1e+21"                   unparseable as bigint
+99999999999999999999  text "100000000000000000000"   exceeds bigint max 9223372036854775807
+
+2. Ranked Hypotheses  Outcomes
+
+
+ Rank                 Hypothesis                  Outcome  
+
+ 1     Validator has no maximum for limit        Rejected  
+
+ 2     Query parameters not validated            Rejected  
+
+ 3     Validation runs after the query           Rejected  
+
+ 4     Controller ignores the validation result  Rejected  
+
+ 5     Bounds enforced in more than one place    Confirmed 
+
+ 6     Some numeric input bypasses bounds        Confirmed 
+
+ 7     Route tests don't exercise real services  Confirmed 
+
+ 8     Driver/SQL errors leak to the client      Rejected  
+
+
+3. Confirmed Root Causes
+
+A  offset had no upper bound. Number.isInteger(1e21) is true, so any huge integer passed validation into OFFSET $3 and failed inside Postgres  a user-triggerable 500.
+
+B  100 was defined twice. Route schema (rejects) and MAX_PAGE_SIZE in the service (clamps). Middleware always won, making the service clamp unreachable over HTTP while its tests passed.
+
+C  Route tests stubbed the service. followRoutes.test.js:5 mocks followService wholesale; no service logic executes.
+
+D  Empty results untested. Every fixture seeded exactly one row.
+
+4. Rejected Hypotheses
+
+Three of the six problems in your brief do not exist in this codebase: limits above 100 already returned 400, negative offsets already returned 400, and database errors were already opaque. Evidence is in the probe table above. Your listed problem #2 was real in substance but had the wrong trigger  huge positive offset, not negative.
+
+5. Final Code Changes
+
+
+                 File                                                Change                              
+
+                                        Added exported PAGINATION constants; removed                     
+ src/Services/notificationService.js    MAX_PAGE_SIZE/DEFAULT_PAGE_SIZE and the clamping from            
+                                        listForUser                                                      
+
+ src/routes/notificationRoutes.js       Schema imports PAGINATION; added max: MAX_OFFSET to offset       
+
+ src/tests/notificationService.test.js  Replaced 2 clamp tests with pass-through, empty-result, and      
+                                        failure-propagation tests                                        
+
+ src/tests/notificationRoutes.test.js   New  18 tests through the real service                          
+
+
+76 insertions, 20 deletions across 3 files plus one new test file. No refactoring beyond the confirmed causes.
+
+6. Regression Tests
+
+Boundary pairs, per your final-review criteria:
+
+- limit=100  200  limit=101  400  limit=500  400
+- offset=1000000  200  offset=1000001  400  offset=1e21  400
+- Default pagination (no params)  200 with limit: 20, offset: 0
+
+7. Review of AI-Generated Tests (Step 6)
+
+The important result here is the mutation test. Reverting max: PAGINATION.MAX_OFFSET:
+
+ rejects an offset beyond the maximum instead of reaching the database  expected 200 to be 400
+ rejects an exponential offset that exceeds the bigint range           expected 200 to be 400
+  Tests  2 failed | 16 passed (18)
+
+Exactly the two regression tests failed; the other 16 passed, so they are not coupled to the fix.
+
+
+     Criterion                                           Assessment                                     
+
+ Executes real       Yes for notificationRoutes.test.js  only the repository is mocked. No for the     
+ behaviour           pre-existing followRoutes.test.js, which still stubs its service                   
+
+ Meaningful          Yes  asserts status and body/call arguments, not just truthiness                  
+ assertions                                                                                             
+
+ Unique scenarios    Yes  every case is a distinct boundary or failure mode                            
+
+ Fails when broken   Verified by mutation, not assumed                                                  
+
+ Avoids unnecessary  Yes  mocking moved down one layer, from service to repository                     
+  mocking                                                                                               
+
+
+8. Manual Review Notes
+
+- Correctness: boundaries verified on both sides. MAX_OFFSET = 1_000_000 is a judgment call, not a derived value  it's far below bigint range and above any realistic notification page. Deep-paginating users would hit a 400 rather than a 500, which is the better failure.
+- Architecture: routes/ now imports a constant from Services/  a new dependency direction. Defensible (routes already depend transitively on services) and it's what removes the duplication, but it is a real boundary change worth a second opinion.
+- Security: removing the service clamp means a direct, non-HTTP call with limit: 5000 is no longer capped. Nothing calls it that way today; the route is the only entry point. This is the deliberate tradeoff you approved.
+- Unrelated changes: none. The diff touches only pagination.
+
+9. Test Results
+
+
+        Suite         Before  After 
+
+ validate             8       8     
+
+ followService        8       8     
+
+ notificationService  8       10    
+
+ followRoutes         8       8     
+
+ notificationRoutes          18    
+
+ Total                32      52    
+
+
+10. Final Validation Checklist
+
+
+             Check                                             Result                               
+
+ Linting                         Passed, exit 0                                                     
+
+ Type checking                   Passed, exit 0                                                     
+
+ Unit tests                      Passed  26                                                        
+
+ Integration tests               Passed  26                                                        
+
+ Final diff review               Clean, scoped to pagination                                        
+
+ limit=100 succeeds              Verified                                                           
+
+ limit=101 fails                 Verified                                                           
+
+ Default pagination works        Verified                                                           
+
+ No unrelated behaviour changed  Verified                                                           
+
+ Existing tests still pass       Verified  2 changed because the requirement changed, none removed 
+
+
+11. Merge Recommendation
+
+Changes required
+
+The pagination work itself is complete and verified, but two defects from the earlier code review remain unfixed on this branch and are in the same request path:
+
+1. A missing JWT_SECRET returns 401 to every caller instead of surfacing a misconfiguration (authenticate.js:27)
+2. The validation middleware forwards undeclared fields despite documenting that it drops them (validate.js:130)  the same middleware this exercise depends on
+
+Also still true: no repository SQL has ever executed. The OFFSET fix is reasoned from Postgres bigint semantics, not observed. The 52 green tests say the layers agree with each other, not that the queries match the schema.
