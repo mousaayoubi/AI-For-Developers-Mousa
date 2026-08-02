@@ -1,1 +1,36 @@
 Week 1 Day 1 (Practical Excercise)
+The tools compared: ChatGPT, Cursor
+
+The prompt used: Review the existing GET /users endpoint and add pagination using the page and limit query parameters.
+
+Requirements:
+
+The default page must be 1.
+
+The default limit must be 20.
+
+The maximum limit must be 100.
+
+Invalid values must return a 400 response.
+
+Preserve the existing user object structure.
+
+Include the current page, limit, total records, and total pages.
+
+Do not add new dependencies.
+
+Follow the existing controller, service, and repository structure.
+
+Add unit and integration tests.
+
+First inspect the relevant files and provide an implementation plan. Do not modify the code until the plan is approved.
+
+The strongest response: ChatGPT
+
+The weakest response: Claude
+
+Incorrect assumptions identified: None
+
+Corrections required: Provide source code for GET /users endpoint
+
+Your recommended tool for the task: ChatGPT
