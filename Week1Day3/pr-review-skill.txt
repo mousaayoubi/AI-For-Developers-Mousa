@@ -1,0 +1,60 @@
+Pull Request Review
+
+Branch: feat/scaffold-src  no base branch exists on the remote
+Commits: b902799 (baseline), 461277d (scaffold)
+Scope reviewed: 461277d  37 files, 8,418 insertions (7,300 of which are package-lock.json)
+
+Reviewing my own work, so weight this accordingly  a second reader should confirm the critical items independently.
+
+Summary
+
+Scaffolds the notification system described in claude.md, which previously had no implementation. Adds an Express API layered as routes  Middleware  Controllers  Services  Repositories, a Postgres schema, a React/Tailwind client under public/, and 32 tests. One vertical slice  follow request producing a web notification  runs end to end through every layer as a reference pattern.
+
+Critical Issues
+
+1. A missing JWT_SECRET silently degrades to "everyone is unauthenticated."
+src/Middleware/authenticate.js:27 calls requireEnv("JWT_SECRET") inside the try, and the bare catch at src/Middleware/authenticate.js:34 swallows every throw into UnauthorizedError("Invalid or expired token."). If the variable is unset, every authenticated request returns 401 rather than surfacing a misconfiguration. assertBootEnv() only protects server.js; anything importing createApp() directly  tests, a serverless wrapper, a future embedder  bypasses that guard entirely. A production deploy that lost its secret would look like a mass auth failure, not an outage, which is the harder thing to diagnose.
+
+2. The validation middleware does not do what its own documentation claims.
+src/Middleware/validate.js:7 states unknown fields are dropped so controllers only see declared fields. src/Middleware/validate.js:130 does Object.assign(req[source], cleaned)  a merge into the existing object, which leaves every undeclared field in place. validateObject genuinely does drop them, and the test at src/tests/validate.test.js asserting that behaviour exercises validateObject directly, never the middleware. So the guarantee is tested where it holds and documented where it doesn't. No exploit exists today because controllers read named fields explicitly, but the security rule "validate all user-controlled input" is relying on a property the code does not have, and the next controller that does {...req.body} inherits a hole.
+
+Important Issues
+
+3. The Express 5 comment above that line is misleading.
+src/Middleware/validate.js:128130 justifies the field-by-field assignment as accommodating Express 5's req.query getter. This project is on Express ^4.21.2, and mutating the object a getter returns is precisely what breaks under Express 5 if the getter re-parses. The comment reads as "this is handled" when the upgrade path is untested. Either verify it or drop the claim.
+
+4. Notification loss is silent and unbounded.
+src/Services/followService.js deliberately swallows notification failures so a follow still commits  defensible. But nothing records the dropped notification: no outbox, no retry, no metric. In a system whose entire purpose is notifications, a Postgres blip means notifications vanish with only a console.error behind them. At minimum this needs a tracking issue.
+
+5. JWT verification does not pin the algorithm.
+src/Middleware/authenticate.js:27 omits algorithms: ["HS256"]. jsonwebtoken v9 narrows to HMAC when handed a string secret, so the classic confusion attack is mitigated  this is defence in depth, not an open hole. Pin it anyway; it costs one line.
+
+6. public/ serves two conflicting purposes.
+vite.config.js roots Vite at public/, but Vite's own convention is that public/ holds assets copied verbatim. Anyone who drops a favicon there per the Vite docs will get surprising behaviour, and the project now has no conventional static-asset directory. This follows claude.md's documented layout, so it may be intended  flagging that the two conventions collide.
+
+7. Dead code at three layers. isProduction (src/config.js:56), isFollowing (src/Repositories/followRepository.js:40), and transaction (src/Repositories/db.js:45) are exported and called nowhere. transaction is the notable one: it exists but the follow-plus-notification write  the one place a transaction would matter  doesn't use it.
+
+Optional Improvements
+
+- No rate limiting on POST /api/follows; a loop generates unbounded notification rows.
+- raise()'s self-notification guard is unreachable  requestFollow rejects self-follows first.
+- useState in public/App.jsx is annotated with Function rather than a real setter type, which checks as any.
+- npm run dev hard-fails when .env is absent (--env-file); --env-file-if-exists would be kinder, at the cost of a Node 22 floor.
+
+Missing Tests
+
+Your rules require tests for every new behaviour. These behaviours shipped with none:
+
+- notificationRoutes entirely  GET /api/notifications and PATCH /api/notifications/:id/read have no integration test. Only followRoutes is covered. The pagination clamp is tested at the service, never through the query-parameter path that actually feeds it.
+- DELETE /api/follows/:followeeId  service-level only; the route, its auth, and its param validation are unexercised.
+- The validation middleware itself  as noted in issue 2, only the pure function is tested.
+- The entire front end  App.jsx, NotificationList.jsx, and api.js have zero tests, including the error path currently visible in your browser.
+- Every repository  no database was reachable, so all SQL in src/Repositories/ is unexecuted. The 32 passing tests demonstrate nothing about whether the schema and queries agree; 001_init.sql has never been applied.
+
+Final Recommendation
+
+Changes required.
+
+Issues 1 and 2 are defects in the security-relevant path, and the missing notification-route and repository coverage puts the branch short of the project's own testing rules and definition of done. The layering, error envelope, and parameterised SQL are sound; the problems are localised and small to fix.
+
+Per the skill's boundaries I've modified nothing and am not approving or merging. Say the word and I'll fix issues 13 and add the missing route tests as a follow-up commit.

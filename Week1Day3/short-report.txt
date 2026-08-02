@@ -1,0 +1,2 @@
+The AI behaved more accurately and bounded when given clearer instructions and context.
+It created many of the folders and files as per the context given and followed git workflow and tests as instructed.

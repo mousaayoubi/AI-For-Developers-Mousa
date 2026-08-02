@@ -1,12 +1,11 @@
 Week 1 Day 3 (Practical Exercise)
-Project instruction file
+Project instruction file: ./claude/CLAUDE.md
+Architecture documentation: given
 
-Architecture documentation
+Coding and testing rules: given
 
-Coding and testing rules
+Pull Request review skill: given
 
-Pull Request review skill
+Feature completion skill: given
 
-Feature completion skill
-
-A short report describing how the AI behaved before and after receiving the project context
+A short report describing how the AI behaved before and after receiving the project context: given

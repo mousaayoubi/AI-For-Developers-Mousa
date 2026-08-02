@@ -1,0 +1,103 @@
+Feature Completion
+
+Feature: Scaffold /src per the documented architecture, with one working vertical slice
+Branch: feat/scaffold-src @ 461277d (pushed)
+Working tree: clean
+
+Acceptance Criteria
+
+Criteria are drawn from claude.md's definition of done plus the scope you approved (JavaScript, Express + Vitest, one vertical slice).
+
+
+  #              Criterion                                         Status                              
+
+ 1    /src matches the documented      Passed                                                          
+      structure and casing                                                                             
+
+ 2    Layer responsibilities kept      Passed                                                          
+      separate                                                                                         
+
+ 3    Users authenticated before a     Passed  follower id comes from the verified token; asserted in 
+      follow request                    followRoutes.test.js                                           
+
+ 4    Notifications web-only, no       Passed  no outbound transport exists                           
+      email path                                                                                       
+
+ 5    Linting passes                   Passed                                                          
+
+ 6    Type checking passes             Passed                                                          
+
+ 7    Required tests pass              Passed  but see criterion 8                                    
+
+ 8    Tests for every new behaviour    Failed  notification routes, the delete route, the validation  
+                                       middleware, and the whole front end have none                   
+
+ 9    All user-controlled input        Failed  the middleware does not drop undeclared fields as      
+      validated                        documented                                                      
+
+ 10   No stack traces exposed to       Passed  asserted directly in followRoutes.test.js              
+      clients                                                                                          
+
+ 11   No secrets in source             Passed  .env git-ignored, no token in .git/config              
+
+ 12   Authorisation confirmed before   Passed  markRead scopes its UPDATE by recipient                
+      protected actions                                                                                
+
+ 13   Documentation updated            Passed  README.md                                              
+
+ 14   Final diff contains no           Passed  baseline files split into b902799                      
+      unrelated changes                                                                                
+
+ 15   Security risks reviewed          Failed  review completed, two findings remain unfixed          
+
+ 16   Repository SQL correct against   Not verified  no database was reachable                        
+      the schema                                                                                       
+
+ 17   Client renders against a live    Not verified  API not running; error state only                
+      API                                                                                              
+
+
+12 passed, 3 failed, 2 not verified.
+
+Validation Results
+
+- Linting: Passed  eslint ., exit 0, no warnings
+- Type checking: Passed  tsc --noEmit, exit 0
+- Unit tests: Passed  24 tests across validate, followService, notificationService
+- Integration tests: Passed  8 tests in followRoutes.test.js (full middleware stack via supertest, services mocked)
+- Build: Passed  vite build, 29 modules
+
+Total 32 tests, exit 0. No test was skipped, weakened, or removed to reach this state.
+
+Risks
+
+Technical. Every repository function is unexecuted  no Postgres was available, so 001_init.sql has never been applied and no query has run against real tables. A column-name or type mismatch would pass all 32 tests and fail on first boot. This is the largest gap between "green" and "working."
+
+Security. Two unresolved findings from the review: a missing JWT_SECRET returns 401 to every caller instead of surfacing a misconfiguration (authenticate.js:27), and the validation middleware forwards undeclared fields despite documenting the opposite (validate.js:130). Neither is exploitable through today's controllers; both weaken the guarantee later code will assume.
+
+Operational. Notification failures are logged and discarded with no outbox or retry, in a system whose sole purpose is delivering notifications. No rate limiting on follow creation.
+
+Process. This assessment reviews my own work. Independent confirmation is worth more than my self-report, particularly on the two security findings.
+
+Missing Work
+
+Required before this is genuinely complete:
+
+1. Fix the two security findings (review issues 1 and2)
+2. Integration tests for GET /api/notifications, PATCH /api/notifications/:id/read, and DELETE /api/follows/:followeeId
+3. Tests for the validation middleware, not just validateObject
+4. Apply the migration against a real database and exercise the repositories
+5. Token issuance  no signup or login exists, so nothing mints a token; the app cannot be used end to end by a real user
+6. Any front-end test at all
+
+Items 13 I can do now. Item 4 needs Postgres. Item 5 is a separate feature slice.
+
+Pull Request Summary
+
+ Scaffold notification system API and client
+
+ Stands up the architecture documented in claude.md, which had no implementation. Adds a layered Express API (routes  Middleware  Controllers  Services  Repositories), Postgres schema, and a React/Tailwind client, with one vertical slice  follow request producing a web notification  running through every layer as a reference pattern.
+
+ Both architecture rules are enforced structurally: the follower id is taken only from the verified bearer token, and no outbound transport exists anywhere in the notification path.
+
+ Lint, typecheck, and 32 tests pass; the client builds. Repository SQL is unexecuted (no database available) and token issuance is not implemented.
