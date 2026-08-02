@@ -1,0 +1,15 @@
+Cleaned feature branch
+
+Final Git diff
+
+Improved commit messages
+
+AI-generated review
+
+Your manual review notes
+
+Test results
+
+Pull Request description
+
+List of AI suggestions you accepted or rejected
