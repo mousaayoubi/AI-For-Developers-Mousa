@@ -1,0 +1,118 @@
+Week 1 Day 2 (Practical Excersise)
+The original vague request: Add notifications to the application.
+
+Questions you identified: 
+What types of notifications?
+Which users receive them?
+What triggers them?
+Where are they displayed?
+Are they stored?
+Can users mark them as read?
+Are email notifications required?
+What permissions apply?
+
+The final structured prompt:
+Objective
+Add web-based notifications to online users on dashboard when a user is followed.
+
+Project Context
+Technology stack: The frontend users React and TailwindCSS. The backend uses Node and PostrgeSQL.
+
+Relevant files: None provided.
+
+Current behaviour: The user is not notified when someone follows him/her.
+
+Architecture: React, TailwindCSS, Node, PostgreSQL.
+
+Existing libraries: None.
+
+Requirements
+Requirement: Only authenticated users can follow each other.
+
+Requirement: Do not modify the code until the plan is approved. 
+
+Constraints
+Constraint: Do not add new dependencies
+
+Acceptance Criteria
+Criterion: Non-logged in users receive an unauthorized 403 response.
+
+Criterion: The notification is received on the web.
+
+Process
+Inspect the relevant files
+Explain the current implementation
+Propose a plan
+List risks and assumptions
+Wait for approval
+
+Output Format
+Return:
+Current implementation
+Proposed changes
+Files affected
+Risks
+Test plan
+
+The AI-generated plan:
+Since no repository files were provided, this plan is built from the stated stack (React/Tailwind + Node/PostgreSQL, no existing libraries) and reasonable assumptions about a typical setup. I'll flag every assumption explicitly  if you can share the actual auth middleware, follow endpoint, and dashboard component files, I'll tighten this to match your real code before implementation.
+
+Current Implementation
+
+Assumption (no files provided): There is likely a REST endpoint like POST /api/users/:id/follow protected by session/JWT auth middleware, a follows table in PostgreSQL, and a React dashboard that renders online users but has no notification mechanism. There is no real-time channel (WebSocket/SSE) between backend and frontend today  the client only ever gets data via request/response.
+
+If this doesn't match reality, let me know and I'll adjust.
+
+Proposed Plan
+
+Constraint handling: "No new dependencies" rules out socket.io or ws. I'm proposing Server-Sent Events (SSE) instead of WebSockets:
+
+Backend: plain Node http/Express response kept open with Content-Type: text/event-stream  needs zero new packages.
+Frontend: native browser EventSource API  needs zero new packages.
+pg (already required to talk to PostgreSQL) is treated as pre-existing, not "new."
+
+Backend
+
+DB migration  add a notifications table: id, recipient_id, actor_id, type, payload (jsonb), is_read, created_at.
+Follow endpoint  after a successful follow (must pass existing auth middleware), insert a notification row.
+SSE endpoint  GET /api/notifications/stream, gated by the same auth middleware used elsewhere. Unauthenticated request  403 immediately, connection never upgrades to text/event-stream.
+Delivery  in-memory map of userId  [response objects] on connect/disconnect. On new follow, if the recipient has an open connection, push an SSE notification event immediately; the row in the DB also lets the frontend fetch missed/unread notifications on load (covers the case where the user wasn't connected at follow-time).
+Fan-out across multiple server instances (only if you run more than one Node process)  use PostgreSQL LISTEN/NOTIFY (native to pg, no new dependency) so any instance holding the recipient's SSE connection can pick up the event.
+
+Frontend
+
+On dashboard mount, open new EventSource('/api/notifications/stream', { withCredentials: true }).
+On message event, push a toast ("X started following you") and update a notification badge/list in state.
+On mount, also GET /api/notifications?unread=true to backfill anything missed while offline.
+Mark-as-read on click (existing pattern, small addition).
+Files Affected (assumed paths  to confirm against your repo)
+backend/migrations/xxxx_create_notifications.sql (new)
+backend/routes/notifications.js (new  SSE + list endpoint)
+backend/routes/follows.js (edit  insert notification + push on follow)
+backend/middleware/auth.js (reuse, no change expected)
+backend/lib/sseRegistry.js (new  connection map + optional LISTEN/NOTIFY glue)
+frontend/src/hooks/useNotifications.js (new)
+frontend/src/components/Dashboard.jsx (edit  mount hook, render badge/toast)
+frontend/src/components/NotificationToast.jsx (new)
+Risks / Assumptions
+Assumption: an auth middleware and follow endpoint already exist and can be reused as-is for the SSE route.
+Scaling: the in-memory connection map only works for a single Node process; if you run multiple instances behind a load balancer, you need the LISTEN/NOTIFY fallback (added complexity) or sticky sessions.
+SSE limitations: one-directional (serverclient only, which is fine here), and browsers cap concurrent SSE connections per domain (~6 over HTTP/1.1; not an issue over HTTP/2).
+Missed events: if the recipient's tab is closed at follow-time, they only see it on next load via the backfill fetch, not "live"  acceptable given the acceptance criteria says "received on the web," not necessarily real-time-while-offline.
+Security: SSE endpoint must enforce the exact same auth check as REST routes (cookie/token), and CORS must explicitly allow credentials if frontend/backend are on different origins.
+Test Plan
+POST /follow without auth  403.
+GET /notifications/stream without auth  403, no stream opens.
+Authenticated user A connects to stream; user B follows A  A receives an SSE notification event within a short timeout.
+Notification row is correctly persisted in notifications table on follow.
+User not connected at follow-time still sees the notification via backfill (GET /notifications?unread=true) on next dashboard load.
+Frontend: mock EventSource, assert toast/badge renders on incoming event.
+Reconnect behavior: kill and restore the SSE connection, confirm EventSource's built-in auto-reconnect resumes delivery.
+Manual QA in a real browser: two logged-in users, live follow, confirm toast appears without refresh.
+
+Let me know if you'd like me to adjust anything (e.g. you'd rather poll instead of SSE, or you do have multiple server instances and want LISTEN/NOTIFY built in from the start)  once approved, I'll proceed with implementation.
+
+Problems found in the plan: None
+
+Your corrected version: N/A
+
