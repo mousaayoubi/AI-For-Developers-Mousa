@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bug Report Analyser</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="page">
+    <header class="page-header">
+      <h1>🐞 Bug Report Analyser</h1>
+      <p class="subtitle">Describe a bug. A local Ollama model will diagnose it.</p>
+    </header>
+
+    <form id="bug-form" class="card">
+      <label>
+        Expected behaviour
+        <textarea name="expected" rows="2" placeholder="Invalid login should return 401."></textarea>
+      </label>
+
+      <label>
+        Actual behaviour
+        <textarea name="actual" rows="2" placeholder="The API returns 500."></textarea>
+      </label>
+
+      <label>
+        Error message
+        <textarea name="error" rows="2" placeholder="Cannot read properties of null."></textarea>
+      </label>
+
+      <label>
+        Reproduction steps
+        <textarea name="reproduction" rows="3" placeholder="Attempt login using an email that does not exist."></textarea>
+      </label>
+
+      <label>
+        Additional question <span class="optional">(optional)</span>
+        <textarea name="question" rows="2" placeholder="Could this be related to the testing framework?"></textarea>
+      </label>
+
+      <div class="form-row">
+        <label class="checkbox">
+          <input type="checkbox" name="simulateInvalid" />
+          Simulate a malformed AI response (test error handling)
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" id="submit-btn">Analyse Bug</button>
+        <button type="button" id="clear-btn" class="secondary">Clear</button>
+      </div>
+    </form>
+
+    <section id="status" class="status" hidden></section>
+
+    <section id="error-banner" class="error-banner" hidden></section>
+
+    <section id="result" class="card result" hidden>
+      <h2>Analysis</h2>
+
+      <div class="result-row">
+        <span class="result-label">Summary</span>
+        <p id="result-summary" class="result-summary"></p>
+      </div>
+
+      <div class="result-row">
+        <span class="result-label">Severity</span>
+        <span id="result-severity" class="severity-badge"></span>
+      </div>
+
+      <div class="result-row">
+        <span class="result-label">Possible causes</span>
+        <ul id="result-causes" class="cause-list"></ul>
+      </div>
+
+      <div class="result-row">
+        <span class="result-label">Next step</span>
+        <p id="result-nextstep" class="result-nextstep"></p>
+      </div>
+
+      <details id="trace-details" class="trace" hidden>
+        <summary>Tool calls used by the model</summary>
+        <ul id="trace-list"></ul>
+      </details>
+
+      <details class="raw-debug">
+        <summary>Raw response (debug)</summary>
+        <pre id="raw-json"></pre>
+      </details>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

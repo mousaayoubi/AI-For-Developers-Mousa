@@ -1,0 +1,17 @@
+{
+  "name": "bug-report-analyser",
+  "version": "1.0.0",
+  "description": "Vanilla JS app that uses a local Ollama model to analyse software bug reports.",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
