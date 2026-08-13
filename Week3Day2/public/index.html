@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Document Q&amp;A Assistant</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="page-header">
+      <h1>Document Q&amp;A Assistant</h1>
+      <p class="subtitle">Ask a question about the project. Answers are grounded in local documentation.</p>
+    </header>
+
+    <main>
+      <form id="ask-form" class="ask-form">
+        <label for="question" class="visually-hidden">Ask a question about the project</label>
+        <input
+          id="question"
+          name="question"
+          type="text"
+          placeholder="Ask a question about the project…"
+          autocomplete="off"
+          required
+        />
+        <button type="submit" id="ask-button">Ask</button>
+      </form>
+
+      <div class="examples">
+        <span>Try:</span>
+        <button type="button" class="example-chip">Which database does the project use?</button>
+        <button type="button" class="example-chip">How does the application verify users before allowing access to private routes?</button>
+        <button type="button" class="example-chip">What must happen before a Pull Request is merged?</button>
+        <button type="button" class="example-chip">Which AWS region is production deployed to?</button>
+      </div>
+
+      <section id="result" class="result" hidden>
+        <div class="result-block">
+          <h2>Answer</h2>
+          <p id="answer-text"></p>
+        </div>
+
+        <div class="result-block">
+          <h2>Sources</h2>
+          <ul id="sources-list" class="sources-list"></ul>
+        </div>
+
+        <details id="debug-block" class="result-block debug-block">
+          <summary>Retrieved chunks &amp; similarity scores (dev view)</summary>
+          <ol id="chunks-list" class="chunks-list"></ol>
+        </details>
+      </section>
+
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

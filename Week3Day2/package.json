@@ -1,0 +1,15 @@
+{
+  "name": "document-qa-assistant",
+  "version": "1.0.0",
+  "description": "A vanilla JS RAG application that answers questions from a local knowledge base using local Ollama models.",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "index": "node src/index.js",
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
