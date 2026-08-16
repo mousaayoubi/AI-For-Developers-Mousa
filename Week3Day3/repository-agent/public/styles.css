@@ -1,0 +1,249 @@
+:root {
+  --bg: #0f1420;
+  --panel: #171e2e;
+  --border: #2a3348;
+  --text: #e6e9f0;
+  --text-dim: #9aa4b8;
+  --accent: #5b8cff;
+  --danger: #ff5b6e;
+  --danger-bg: #3a1620;
+  --success: #4caf7d;
+  --denied: #e0793d;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+}
+
+.page-header h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.75rem;
+}
+
+.subtitle {
+  margin: 0 0 1.5rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.subtitle code {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.1rem 0.35rem;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+}
+
+textarea {
+  width: 100%;
+  margin-top: 0.4rem;
+  padding: 0.6rem 0.7rem;
+  background: #0d1220;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.95rem;
+  resize: vertical;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.examples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.examples-label {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-right: 0.15rem;
+}
+
+.chip {
+  background: #0d1220;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.chip:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.chip.danger:hover {
+  border-color: var(--danger);
+  color: #ffb3bb;
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  padding: 0.65rem 1.4rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+#submit-btn {
+  background: var(--accent);
+  color: white;
+}
+
+#submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.secondary {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+
+.status {
+  color: var(--text-dim);
+  padding: 0.75rem 0;
+  font-size: 0.9rem;
+}
+
+.error-banner {
+  background: var(--danger-bg);
+  border: 1px solid var(--danger);
+  color: #ffb3bb;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+}
+
+.result-answer {
+  margin: 0 0 1rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.stopped-note {
+  background: rgba(224, 121, 61, 0.12);
+  border: 1px solid var(--denied);
+  color: #ffcfa8;
+  border-radius: 8px;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.result-row {
+  margin-bottom: 0.5rem;
+}
+
+.result-label {
+  display: block;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  margin-bottom: 0.4rem;
+}
+
+.file-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  line-height: 1.7;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+}
+
+.no-files {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.trace {
+  margin-top: 1.25rem;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+}
+
+.trace summary {
+  cursor: pointer;
+  color: var(--text);
+}
+
+.trace ol {
+  padding-left: 1.2rem;
+  line-height: 1.8;
+}
+
+.log-status {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  padding: 0.05rem 0.4rem;
+  border-radius: 4px;
+  margin-left: 0.4rem;
+}
+
+.log-status-success {
+  background: rgba(76, 175, 125, 0.15);
+  color: var(--success);
+}
+
+.log-status-denied {
+  background: rgba(224, 121, 61, 0.15);
+  color: var(--denied);
+}
+
+.log-status-error {
+  background: rgba(255, 91, 110, 0.15);
+  color: var(--danger);
+}
+
+.log-args {
+  color: var(--text-dim);
+}

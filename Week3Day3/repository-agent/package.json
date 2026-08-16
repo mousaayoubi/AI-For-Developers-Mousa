@@ -1,0 +1,14 @@
+{
+  "name": "repository-agent",
+  "version": "1.0.0",
+  "description": "A vanilla JS read-only repository investigation agent that decides which tools to call against a local Ollama model.",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
