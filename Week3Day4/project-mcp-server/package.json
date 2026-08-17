@@ -1,0 +1,16 @@
+{
+  "name": "project-mcp-server",
+  "version": "1.0.0",
+  "description": "An MCP server (vanilla JavaScript) that exposes read-only access to a sample project through MCP tools, a resource, and a prompt.",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "inspector": "npx @modelcontextprotocol/inspector node src/server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^4.4.3"
+  }
+}
