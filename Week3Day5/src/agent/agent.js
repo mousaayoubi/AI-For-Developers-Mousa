@@ -92,6 +92,24 @@ export async function runAgent(goal, options = {}) {
           continue;
         }
 
+        // Evidence-first nudge: the model found a plausible file via search
+        // but is about to state facts about it without ever opening it.
+        // Push it to actually read the file rather than accept a claim
+        // that has no read_project_file evidence behind it yet (Part 15) -
+        // cheaper and more useful than flagging it after the fact.
+        const unverifiedMentions = findUnverifiedFileMentions(message.content || "", memory);
+        if (nudgeCount < MAX_NUDGES && step < guardrails.maxAgentSteps && unverifiedMentions.length > 0) {
+          nudgeCount += 1;
+          memory.messages.push({ role: "assistant", content: message.content || "" });
+          memory.messages.push({
+            role: "user",
+            content:
+              `You named ${unverifiedMentions.join(", ")} but have not opened ${unverifiedMentions.length > 1 ? "them" : "it"} ` +
+              `with read_project_file yet. Read ${unverifiedMentions.length > 1 ? "them" : "it"} now to confirm before finalizing your answer.`,
+          });
+          continue;
+        }
+
         const rawAnswer = stripSelfReportedFileList(message.content?.trim()) ||
           "The agent finished without producing an answer.";
         const { answer, flagged } = validateAgainstEvidence(rawAnswer, memory);
@@ -190,30 +208,36 @@ export async function runAgent(goal, options = {}) {
 }
 
 /**
- * Part 15: Validate Final Responses. If the final answer names a file
- * (by path or bare filename with a known extension) that was never
- * actually read via read_project_file, flag the response instead of
- * silently trusting the model's claim.
+ * Finds file names mentioned in `content` that this run actually knows
+ * exist (seen via a list/search result) but were never the target of a
+ * successful read_project_file call. Only checking against known
+ * filenames - rather than any "word.js"-shaped token - avoids
+ * false-positives like "Express.js" or "Node.js", which are library names
+ * rather than project files.
  */
-function validateAgainstEvidence(answer, memory) {
-  // Only check mentions against files this run actually knows exist (seen
-  // via list/search results) - matching any "word.js"-shaped token in the
-  // answer would false-positive on things like "Express.js" or "Node.js"
-  // that are library names, not project files.
+function findUnverifiedFileMentions(content, memory) {
   const knownFiles = new Set([...memory.filesSearched, ...memory.filesRead]);
-  const knownBaseNames = new Map([...knownFiles].map((f) => [f.split("/").pop().toLowerCase(), f]));
+  const knownBaseNames = new Set([...knownFiles].map((f) => f.split("/").pop().toLowerCase()));
 
-  const mentionedTokens = [...answer.matchAll(/\b[\w./-]+\.(?:js|ts|md|json)\b/gi)].map((m) => m[0]);
+  const mentionedTokens = [...content.matchAll(/\b[\w./-]+\.(?:js|ts|md|json)\b/gi)].map((m) => m[0]);
   const mentionedFiles = new Set(
     mentionedTokens.filter((token) => knownBaseNames.has(token.split("/").pop().toLowerCase()))
   );
 
-  const unverified = [...mentionedFiles].filter((mention) => {
+  return [...mentionedFiles].filter((mention) => {
     const bareName = mention.split("/").pop().toLowerCase();
     const wasRead = [...memory.filesRead].some((f) => f.split("/").pop().toLowerCase() === bareName);
     return !wasRead;
   });
+}
 
+/**
+ * Part 15: Validate Final Responses. If the final answer names a file
+ * that was never actually read via read_project_file, flag the response
+ * instead of silently trusting the model's claim.
+ */
+function validateAgainstEvidence(answer, memory) {
+  const unverified = findUnverifiedFileMentions(answer, memory);
   if (unverified.length === 0) return { answer, flagged: false };
 
   const note =

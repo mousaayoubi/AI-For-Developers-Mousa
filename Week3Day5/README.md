@@ -274,7 +274,7 @@ expects to appear in `filesInspected` (i.e. actually opened via
 reproducible local-model limitation, not a scoring bug; see the concrete
 cases below.
 
-### Two things this evaluation run caught and fixed live
+### Bugs this project caught and fixed live (via real usage, not just the eval script)
 
 1. **Evidence-check false positive.** The Part 15 validator initially
    flagged "Express.js" in an agent answer as an unread project file,
@@ -287,8 +287,30 @@ cases below.
    inspection. Fixed by clarifying in the classifier prompt that route
    names describe workflows, not keywords to match; routing accuracy went
    from 85% to 92% on the next run.
+3. **"Which tests cover X?" misrouted to documentation.** Reported via
+   manual use after the write-up above already called this "a genuinely
+   ambiguous question" — on reflection it isn't: answering it requires
+   opening the actual test file, and the classifier was matching "tests"
+   to the topic of `testing.md` by word association, not by what the
+   question needs. Fixed with a deterministic router override
+   (`looksLikeTestCoverageQuestion` in `router.js`) plus a clarifying
+   example in the classifier prompt, mirroring how file-access attempts
+   are already force-routed to `repository` rather than trusted to the
+   LLM (Part 14). Verified live: routing now resolves instantly
+   (`routingMs: 0`, no LLM call needed) and correctly.
+4. **Agent answering before reading.** Fixing #3 surfaced a second bug on
+   the same question: the agent found `tests/auth.test.js` via
+   `search_project_files` and answered immediately without opening it -
+   correctly caught and flagged by the Part 15 evidence check, but a
+   claim that could have been verified for free. Added a matching
+   evidence-first *nudge*: before accepting a final answer, the agent
+   loop now checks whether it names a known file it never read, and if
+   so tells the model to read it first, reusing the same nudge budget as
+   the existing "you described a tool call instead of making it" nudge.
+   Verified live: the same question now reads the file before answering
+   (`toolsUsed` includes `read_project_file`, `flagged: false`).
 
-### Known failures in the agent category (real observed cases)
+### Known failures in the agent category (real observed cases, before fixes #3/#4 above)
 
 - **agent-1** ("Find where authentication is implemented"): the agent read
   only `src/routes/authRoutes.js` and answered solely about that file — it
@@ -303,10 +325,10 @@ cases below.
   not flag it - the guardrail catches *unread* claims, not *wrong*
   interpretations of files that were read.
 - **agent-3** ("Which tests cover authentication?"): misrouted to
-  `documentation` both runs - a genuinely ambiguous question (it could
-  plausibly mean "what does the testing doc say" or "which test file in
-  the code") that the router prompt was not strengthened further for, to
-  avoid overfitting the classifier to this exact evaluation wording.
+  `documentation` in both evaluation runs, and answered without reading
+  the file it found even after the route was fixed. Both root causes are
+  now fixed (see above) and verified against this exact question through
+  the live server, not just re-scored by the eval harness.
 - **agent-4** ("Which module handles user data persistence?"): the agent
   read only `README.md`, yet still answered `userRepository.js` correctly
   by name — a plausible guess from naming conventions, not from having
@@ -316,6 +338,9 @@ cases below.
   not flag this one. This is the exact heuristic limitation called out
   under *Limitations* below: the evidence-check only catches claims about
   files it saw named somewhere in the run, not every real project file.
+  The new evidence-first nudge (#4 above) does not help here either,
+  for the same reason - it also only acts on filenames the run has
+  actually seen.
 
 ## Limitations
 

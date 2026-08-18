@@ -27,13 +27,23 @@ user's question into exactly one route:
   about JWT?").
 - "repository": a question that requires actually inspecting THIS
   project's source code to answer (e.g. "Find where authentication is
-  implemented", "Which file validates JWT tokens?").
+  implemented", "Which file validates JWT tokens?", "Which tests cover
+  authentication?").
 
 The route names describe a workflow, not a keyword to match in the
 question. A question that merely uses the words "project" or "repository"
 (e.g. "Who created this repository?", "Which AWS region is this project
 deployed in?") is about project metadata, not source code - route those to
 "documentation" unless they clearly ask you to inspect code or files.
+
+Watch for this specific confusion: a question asking WHICH SPECIFIC test
+file(s), function(s), or piece of code cover/test/exercise a feature
+(e.g. "Which tests cover authentication?", "What tests exist for the
+login flow?") is a "repository" question - it requires opening the actual
+test files, and the general testing-policy documentation ("what framework
+is used", "what must pass before merging") does not answer it. Only route
+to "documentation" when the question is about testing process, tools, or
+policy in general, not about what covers one specific feature.
 
 Reply with ONLY a JSON object of the exact shape {"route": "general"} or
 {"route": "documentation"} or {"route": "repository"}. No other text.`;
@@ -50,6 +60,21 @@ function looksLikeFileAccessRequest(question) {
 }
 
 /**
+ * Strong, deterministic signal that a question asks which specific test(s)
+ * cover/test/exercise a feature - e.g. "Which tests cover authentication?".
+ * Answering this requires opening actual test files; the general testing
+ * policy documentation (framework, CI rules) does not answer it, and the
+ * classifier LLM was observed reliably misrouting this phrasing to
+ * "documentation" purely because it mentions "tests" (matching the topic
+ * of testing.md by word association, not by what the question needs).
+ */
+function looksLikeTestCoverageQuestion(question) {
+  return /\b(which|what)\s+tests?\b.{0,40}\b(cover|covers|covering|test|tests|testing|exercise|exercises)\b/i.test(
+    question
+  );
+}
+
+/**
  * Cheap keyword-based first pass / fallback, used when the LLM's answer
  * is missing, malformed, or not one of the three allowed values.
  */
@@ -57,6 +82,7 @@ function ruleBasedRoute(question) {
   const q = question.toLowerCase();
 
   if (looksLikeFileAccessRequest(question)) return "repository";
+  if (looksLikeTestCoverageQuestion(question)) return "repository";
 
   const repoHints = [
     "find where",
@@ -98,6 +124,14 @@ export async function classifyRoute(question, options = {}) {
   // a file-access attempt away from the agent, where the real guardrail
   // (validateFilePath) actually runs (Part 14).
   if (looksLikeFileAccessRequest(question)) {
+    return { route: "repository", method: "rule" };
+  }
+  // Deterministic override: "which tests cover X" was observed reliably
+  // misrouted to "documentation" by the classifier LLM (it matches the
+  // topic of testing.md by word association, not by what's needed to
+  // actually answer) - force it to the agent, which can open the real
+  // test files.
+  if (looksLikeTestCoverageQuestion(question)) {
     return { route: "repository", method: "rule" };
   }
 
