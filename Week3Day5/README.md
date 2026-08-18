@@ -253,26 +253,29 @@ runs discussed below).
 Week 03 Evaluation Report
 
 Total Tests:             13
-Passed:                  9
-Overall Success:         69%
-Routing Accuracy:        92%
+Passed:                  10
+Overall Success:         77%
+Routing Accuracy:        100%
 RAG Hit@3:                100%
-Agent Success:            0%
+Agent Success:            25%
 Safety Tests:              100%
-Average Agent Steps:      2.5
-Average Latency:          31.9 seconds
+Average Agent Steps:      4
+Average Latency:          49.7 seconds
 Unsafe Actions Executed:  0
 ```
 
-Every RAG and safety case passed both runs performed during development.
-Routing accuracy improved from 85% to 92% between the two runs after a
-real bug fix (see below). Agent Success is the harshest, most literal
-metric in this dataset - it requires the *specific* file(s) the test
-expects to appear in `filesInspected` (i.e. actually opened via
+RAG, safety, and general cases passed every run performed during
+development; routing accuracy reached 100% after two real bug fixes (see
+below) - the router now resolves every case in this dataset correctly,
+including two deterministic overrides (file-access attempts, test-coverage
+questions) that never even call the LLM. Agent Success is the harshest,
+most literal metric in this dataset - it requires the *specific* file(s)
+the test expects to appear in `filesInspected` (i.e. actually opened via
 `read_project_file`), not just mentioned in the final answer - and
-`llama3.1:8b` did not hit that bar in this run. This is a genuine,
+`llama3.1:8b` only hit that bar on 1 of 4 agent cases. This is a genuine,
 reproducible local-model limitation, not a scoring bug; see the concrete
-cases below.
+cases below. (Earlier runs during development scored 69%/85% and 69%/92%
+overall/routing before these fixes - see the run history in git.)
 
 ### Bugs this project caught and fixed live (via real usage, not just the eval script)
 
@@ -310,7 +313,7 @@ cases below.
    Verified live: the same question now reads the file before answering
    (`toolsUsed` includes `read_project_file`, `flagged: false`).
 
-### Known failures in the agent category (real observed cases, before fixes #3/#4 above)
+### Known failures in the agent category (real observed cases)
 
 - **agent-1** ("Find where authentication is implemented"): the agent read
   only `src/routes/authRoutes.js` and answered solely about that file — it
@@ -324,11 +327,13 @@ cases below.
   the file it named really was read, so the evidence-check correctly did
   not flag it - the guardrail catches *unread* claims, not *wrong*
   interpretations of files that were read.
-- **agent-3** ("Which tests cover authentication?"): misrouted to
-  `documentation` in both evaluation runs, and answered without reading
-  the file it found even after the route was fixed. Both root causes are
-  now fixed (see above) and verified against this exact question through
-  the live server, not just re-scored by the eval harness.
+- **agent-3** ("Which tests cover authentication?"): originally misrouted
+  to `documentation` in the first two evaluation runs, and (once the route
+  was fixed by hand) found `tests/auth.test.js` via search but answered
+  before reading it. **Now fixed and passing** - both root causes (#3/#4
+  above) are fixed in the code, verified both against the live server and
+  by the evaluation harness re-running this exact case (`PASS`, route
+  `repository`, `tests/auth.test.js` in `filesInspected`).
 - **agent-4** ("Which module handles user data persistence?"): the agent
   read only `README.md`, yet still answered `userRepository.js` correctly
   by name — a plausible guess from naming conventions, not from having
