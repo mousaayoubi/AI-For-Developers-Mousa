@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Engineering Assistant</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="page-header">
+      <h1>AI Engineering Assistant</h1>
+      <p class="subtitle">Ask a general question, a project-documentation question, or a repository
+        investigation task. The router decides which workflow handles it.</p>
+    </header>
+
+    <main>
+      <form id="ask-form" class="ask-form">
+        <label for="question" class="visually-hidden">Ask an engineering question</label>
+        <input
+          id="question"
+          name="question"
+          type="text"
+          placeholder="Ask an engineering question…"
+          autocomplete="off"
+          required
+        />
+        <button type="submit" id="ask-button">Ask</button>
+      </form>
+
+      <div class="examples">
+        <span>Try:</span>
+        <button type="button" class="example-chip">What does HTTP 401 mean?</button>
+        <button type="button" class="example-chip">What testing framework does this project use?</button>
+        <button type="button" class="example-chip">Find where authentication is implemented.</button>
+        <button type="button" class="example-chip">Read ../../../.env</button>
+      </div>
+
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+
+      <section id="result" class="result" hidden>
+        <div class="result-block">
+          <div class="result-heading">
+            <h2>Response</h2>
+            <span id="route-badge" class="route-badge"></span>
+          </div>
+          <p id="answer-text"></p>
+        </div>
+
+        <div class="result-block">
+          <h2>Sources</h2>
+          <ul id="sources-list" class="sources-list"></ul>
+        </div>
+
+        <details id="evidence-block" class="result-block debug-block">
+          <summary>Evidence &amp; execution details</summary>
+          <dl class="evidence-grid">
+            <dt>Tools used</dt>
+            <dd id="tools-used">—</dd>
+            <dt>Files inspected</dt>
+            <dd id="files-inspected">—</dd>
+            <dt>Agent steps</dt>
+            <dd id="agent-steps">—</dd>
+            <dt>Fallback used</dt>
+            <dd id="fallback-used">—</dd>
+            <dt>Latency</dt>
+            <dd id="latency">—</dd>
+            <dt>Request ID</dt>
+            <dd id="request-id">—</dd>
+          </dl>
+        </details>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "ai-engineering-assistant",
+  "version": "1.0.0",
+  "description": "Week 03 capstone: a Vanilla JavaScript AI Engineering Assistant combining a local LLM, RAG, an MCP-backed repository agent, routing, guardrails, logging, and evaluation.",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "index": "node src/rag/buildIndex.js",
+    "mcp-server": "node src/mcp/projectServer.js",
+    "evaluate": "node src/evaluation/evaluate.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "express": "^4.21.2",
+    "zod": "^4.4.3"
+  }
+}

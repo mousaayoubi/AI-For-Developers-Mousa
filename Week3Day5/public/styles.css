@@ -1,0 +1,229 @@
+:root {
+  --bg: #0f1117;
+  --panel: #171a23;
+  --panel-border: #2a2e3a;
+  --text: #e7e9ee;
+  --text-dim: #9aa1b1;
+  --accent: #6c8cff;
+  --accent-text: #0f1117;
+  --score-high: #4caf7d;
+  --score-mid: #d9a441;
+  --score-low: #d9534f;
+  --radius: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+}
+
+.page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 4rem;
+}
+
+.page-header h1 {
+  margin: 0 0 0.4rem;
+  font-size: 1.75rem;
+}
+
+.subtitle {
+  color: var(--text-dim);
+  margin: 0 0 2rem;
+}
+
+.ask-form {
+  display: flex;
+  gap: 0.6rem;
+}
+
+#question {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+#question:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+#ask-button {
+  padding: 0.75rem 1.4rem;
+  border-radius: var(--radius);
+  border: none;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+#ask-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+#ask-button:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.examples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.example-chip {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  color: var(--text-dim);
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.example-chip:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.status {
+  margin-top: 1.25rem;
+  color: var(--text-dim);
+  min-height: 1.2rem;
+  font-size: 0.9rem;
+}
+
+.status.error {
+  color: var(--score-low);
+}
+
+.result {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.result-block {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.3rem;
+}
+
+.result-block h2 {
+  margin: 0 0 0.6rem;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
+.result-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.route-badge {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(108, 140, 255, 0.15);
+  border: 1px solid rgba(108, 140, 255, 0.4);
+  color: var(--accent);
+}
+
+.route-badge.route-general { background: rgba(76, 175, 125, 0.15); border-color: rgba(76, 175, 125, 0.4); color: var(--score-high); }
+.route-badge.route-documentation { background: rgba(108, 140, 255, 0.15); border-color: rgba(108, 140, 255, 0.4); color: var(--accent); }
+.route-badge.route-repository { background: rgba(217, 164, 65, 0.15); border-color: rgba(217, 164, 65, 0.4); color: var(--score-mid); }
+.route-badge.route-error { background: rgba(217, 83, 79, 0.15); border-color: rgba(217, 83, 79, 0.4); color: var(--score-low); }
+
+#answer-text {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 1.05rem;
+}
+
+.sources-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.sources-list li {
+  background: rgba(108, 140, 255, 0.15);
+  border: 1px solid rgba(108, 140, 255, 0.4);
+  color: var(--accent);
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.sources-list.empty li {
+  background: transparent;
+  border-style: dashed;
+  color: var(--text-dim);
+}
+
+.debug-block summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
+.evidence-grid {
+  margin: 0.9rem 0 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.4rem 1rem;
+  font-size: 0.88rem;
+}
+
+.evidence-grid dt {
+  color: var(--text-dim);
+}
+
+.evidence-grid dd {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  word-break: break-word;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
