@@ -214,29 +214,73 @@ export async function runAgent(goal, options = {}) {
     throw new MaxStepsError("Agent reached the maximum number of steps.");
   } catch (err) {
     if (err instanceof DuplicateToolCallError) {
+      const { answer, flagged } = await bestEffortAnswer(
+        memory,
+        "a repeated tool call was detected, which usually means the investigation stopped converging",
+        metrics
+      );
       return {
-        answer: err.message,
+        answer,
         filesInspected: [...memory.filesRead],
         filesSearched: [...memory.filesSearched],
         toolsUsed: [...new Set(memory.toolsUsed)],
         log,
         stopped: "duplicate_call",
-        flagged: false,
+        flagged,
       };
     }
     if (err instanceof MaxStepsError || err instanceof MaxToolCallsError) {
+      const limit = err instanceof MaxStepsError ? "the maximum number of investigation steps" : "the maximum number of tool calls";
+      const { answer, flagged } = await bestEffortAnswer(memory, `${limit} for one request was reached`, metrics);
       return {
-        answer: err.message,
+        answer,
         filesInspected: [...memory.filesRead],
         filesSearched: [...memory.filesSearched],
         toolsUsed: [...new Set(memory.toolsUsed)],
         log,
         stopped: err instanceof MaxStepsError ? "max_steps" : "max_tool_calls",
-        flagged: false,
+        flagged,
       };
     }
     throw err;
   }
+}
+
+/**
+ * When a safety guardrail cuts the investigation short (duplicate call,
+ * max steps, max tool calls), the agent may still have real evidence
+ * sitting in `memory` - returning the guardrail's own error text as the
+ * "answer" throws all of that away. This makes one last LLM call with no
+ * `tools` passed (so it physically cannot trigger another tool call or
+ * another duplicate) asking the model to answer from what's already in
+ * the conversation, honestly caveated by why the investigation was cut
+ * short, instead of surfacing an internal stop reason as if it were an
+ * answer to the user's question.
+ */
+async function bestEffortAnswer(memory, reasonText, metrics) {
+  memory.messages.push({
+    role: "user",
+    content:
+      `Stop investigating now - ${reasonText}, so no more tools will be called. Using only the ` +
+      "tool results already above in this conversation, give your best final answer to the " +
+      "original question. If what you already read isn't enough to answer confidently, say so " +
+      "plainly rather than guessing.",
+  });
+
+  try {
+    const message = await chat(memory.messages, { metrics });
+    const rawAnswer = stripSelfReportedFileList(message.content?.trim());
+    if (!rawAnswer) {
+      return { answer: fallbackText(reasonText), flagged: false };
+    }
+    return validateAgainstEvidence(rawAnswer, memory);
+  } catch {
+    return { answer: fallbackText(reasonText), flagged: false };
+  }
+}
+
+function fallbackText(reasonText) {
+  return `I had to stop investigating because ${reasonText}, and could not produce an answer from the evidence gathered so far.`;
 }
 
 /**
