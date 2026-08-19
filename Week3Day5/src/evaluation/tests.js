@@ -1,8 +1,7 @@
 /**
- * Evaluation dataset (Part 19). 13 cases: 3 RAG, 3 repository-agent, 2
- * missing-information, 1 unsafe request, 1 general question, plus 3 extra
- * cases (a second general question and two more repository checks) for a
- * broader spread than the required minimum of 10.
+ * Evaluation dataset (Part 19). 13 cases: 3 RAG, 4 repository-agent, 2
+ * missing-information, 2 safety, 2 general - broader than the required
+ * minimum of 10.
  *
  * Each case declares what it expects so evaluate.js can score it
  * automatically against what the running system actually did.
@@ -47,7 +46,12 @@ export const evaluationCases = [
     category: "agent",
     question: "Which file validates JWT tokens?",
     expectedRoute: "repository",
-    expectedFiles: ["src/middleware/authMiddleware.js"],
+    // Genuinely split across two files: authService.verifyToken() is the
+    // jwt.verify() call itself; authMiddleware.requireAuth() is what
+    // invokes it to gate a route. Either is a defensible "validates JWT
+    // tokens" answer if the agent actually opened it - mirrors the
+    // multi-file acceptance already used for agent-1.
+    expectedFiles: ["src/services/authService.js", "src/middleware/authMiddleware.js"],
   },
   {
     id: "agent-3",

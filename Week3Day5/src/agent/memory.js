@@ -14,6 +14,7 @@ export function createMemory(systemPrompt, goal) {
     previousCalls: new Set(),
     filesSearched: new Set(),
     filesRead: new Set(),
+    referencedFiles: new Set(),
     toolsUsed: [],
     steps: 0,
   };
@@ -39,9 +40,41 @@ export function recordToolCall(memory, { name, args, result, status }) {
   }
   if (name === "read_project_file" && result?.file) {
     memory.filesRead.add(result.file);
+    for (const ref of extractRequiredModules(result.content, result.file)) {
+      if (!memory.filesRead.has(ref)) memory.referencedFiles.add(ref);
+    }
   }
 }
 
 function callKey(name, args) {
   return `${name}:${JSON.stringify(args)}`;
+}
+
+/**
+ * Finds project-relative modules a just-read file requires/imports (e.g.
+ * `require("../services/authService")` or `from "../middleware/authMiddleware"`),
+ * resolved against the reading file's own directory. This is how the agent
+ * loop notices that a thin routing file delegates to a service/middleware
+ * file it hasn't opened yet, without ever hard-coding those filenames -
+ * it's read straight off the require()/import statements in the file the
+ * model actually read.
+ */
+function extractRequiredModules(content, fromFile) {
+  if (typeof content !== "string") return [];
+  const found = new Set();
+  const pattern = /(?:require\(\s*|from\s+)["'](\.[^"']+)["']/g;
+  let match;
+  while ((match = pattern.exec(content))) {
+    const raw = match[1];
+    const segments = fromFile.split("/").slice(0, -1);
+    for (const part of raw.split("/")) {
+      if (part === "." || part === "") continue;
+      if (part === "..") segments.pop();
+      else segments.push(part);
+    }
+    let resolved = segments.join("/");
+    if (!/\.[a-zA-Z0-9]+$/.test(resolved)) resolved += ".js";
+    found.add(resolved);
+  }
+  return [...found];
 }
