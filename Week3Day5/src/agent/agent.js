@@ -26,6 +26,18 @@ Rules:
   before answering - documentation describes intent, not the real
   implementation. Do not rely on architecture.md alone to explain how code
   works.
+- A file path you only saw mentioned in another file's prose (e.g. a
+  directory listing inside README.md) is not evidence of what that file
+  contains. Before naming it in your final answer, confirm it with
+  list_project_files/search_project_files or open it directly - do not
+  answer a "which file/module does X" question from a README structure
+  list alone.
+- A thin routing/controller file (typically under src/routes/) rarely
+  contains the real implementation of what it delegates to. If a file you
+  read requires()/imports another project module (a service, middleware,
+  or repository file) that is directly relevant to the question, read that
+  module too before concluding your investigation - don't stop at the
+  first file just because it mentions the right topic.
 - Only the three tools you are given exist. There is no tool to create,
   modify, or delete files - if asked to change the repository, say plainly
   that you only have read-only access and cannot do that.
@@ -66,7 +78,7 @@ export async function runAgent(goal, options = {}) {
   const memory = createMemory(SYSTEM_PROMPT, goal.trim());
   const log = [];
   let nudgeCount = 0;
-  const MAX_NUDGES = 2;
+  const MAX_NUDGES = 3;
 
   try {
     for (let step = 1; step <= guardrails.maxAgentSteps; step += 1) {
@@ -106,6 +118,26 @@ export async function runAgent(goal, options = {}) {
             content:
               `You named ${unverifiedMentions.join(", ")} but have not opened ${unverifiedMentions.length > 1 ? "them" : "it"} ` +
               `with read_project_file yet. Read ${unverifiedMentions.length > 1 ? "them" : "it"} now to confirm before finalizing your answer.`,
+          });
+          continue;
+        }
+
+        // Delegation-chain nudge: a file the agent actually read requires()/
+        // imports another project module it never opened. Rather than
+        // hard-coding "read authService after authRoutes", this is read
+        // straight off the require()/import statements in whatever file the
+        // model happened to read, so it generalizes to any thin
+        // routing/controller file that delegates elsewhere (Part 15 follow-up).
+        const unreadReferences = [...memory.referencedFiles].filter((f) => !memory.filesRead.has(f));
+        if (nudgeCount < MAX_NUDGES && step < guardrails.maxAgentSteps && unreadReferences.length > 0) {
+          nudgeCount += 1;
+          memory.messages.push({ role: "assistant", content: message.content || "" });
+          memory.messages.push({
+            role: "user",
+            content:
+              `The file(s) you read delegate to ${unreadReferences.join(", ")}, which you have not opened. ` +
+              `If it's relevant to the question, read it before finalizing your answer - a thin routing/controller ` +
+              `file usually isn't where the real implementation lives.`,
           });
           continue;
         }
